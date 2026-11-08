@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BizPilot AI</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f8fafc;color:#111827}
+header{background:white;padding:20px 7%;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:25px;font-weight:bold}.logo span{color:#2563eb}
+main{max-width:950px;margin:55px auto;padding:20px}
+.card{background:white;padding:30px;border:1px solid #e5e7eb;border-radius:16px;max-width:450px;margin:auto}
+h1{font-size:30px}
+p{color:#64748b}
+input{width:100%;padding:13px;margin:9px 0;border:1px solid #ddd;border-radius:8px;font-size:15px}
+button{padding:13px 18px;border:0;border-radius:8px;background:#2563eb;color:white;font-weight:bold;cursor:pointer}
+button:hover{background:#1d4ed8}
+.full{width:100%;margin-top:12px}
+.link{background:none;color:#2563eb;padding:10px 0}
+.hidden{display:none!important}
+.message{margin-top:15px;color:#2563eb;overflow-wrap:anywhere}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:30px}
+.tile{background:white;padding:22px;border:1px solid #e5e7eb;border-radius:12px}
+.tile h3{margin-top:0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+@media(max-width:650px){.grid{grid-template-columns:1fr}main{margin:20px auto}.card{padding:22px}}
+</style>
+</head>
+<body>
+
+<header>
+<div class="logo">BizPilot<span> AI</span></div>
+<div>Business made easier.</div>
+</header>
+
+<main>
+
+<section class="card" id="auth">
+<h1 id="title">Welcome to BizPilot AI</h1>
+<p id="description">Sign in to your business assistant.</p>
+
+<div id="nameBox" class="hidden">
+<input id="name" placeholder="Your name">
+</div>
+
+<input id="email" type="email" placeholder="Email address">
+<input id="password" type="password" placeholder="Password">
+
+<button class="full" id="submit">Sign in</button>
+
+<div>
+<button class="link" id="switch">Create an account</button>
+<button class="link" id="forgot">Forgot password?</button>
+</div>
+
+<div class="message" id="message"></div>
+</section>
+
+<section id="dashboard" class="hidden">
+<div class="top">
+<div>
+<h1 id="welcome">Your Dashboard</h1>
+<p>Your AI business workspace.</p>
+</div>
+<button id="logout">Sign out</button>
+</div>
+
+<div class="grid">
+<div class="tile"><h3>Customer Support</h3><p>Write customer replies.</p></div>
+<div class="tile"><h3>Email Writer</h3><p>Create professional emails.</p></div>
+<div class="tile"><h3>Marketing Assistant</h3><p>Generate marketing ideas.</p></div>
+<div class="tile"><h3>Business Proposals</h3><p>Prepare business proposals.</p></div>
+<div class="tile"><h3>Translation</h3><p>Translate business texts.</p></div>
+<div class="tile"><h3>Product Descriptions</h3><p>Write product descriptions.</p></div>
+</div>
+
+<div class="tile" style="margin-top:20px">
+<h3>Your account</h3>
+<p>Email: <strong id="profileEmail"></strong></p>
+<p>Plan: <strong>Free</strong></p>
+</div>
+</section>
+
+</main>
+
+<script>
+const SUPABASE_URL = "https://seyctnjbxtoxrucyymcn.supabase.co";
+const SUPABASE_KEY = "sb_publishable_AV9-x18S-HnjJwarqQmlbg_CTeojMjV";
+
+const db = window.supabase.createClient(
+SUPABASE_URL,
+SUPABASE_KEY
+);
+
+let mode = "login";
+
+const auth = document.getElementById("auth");
+const dashboard = document.getElementById("dashboard");
+const message = document.getElementById("message");
+
+function showMessage(text){
+message.textContent = text;
+}
+
+function setMode(newMode){
+mode = newMode;
+message.textContent = "";
+
+document.getElementById("nameBox").classList.toggle("hidden", mode !== "signup");
+document.getElementById("password").classList.toggle("hidden", mode === "reset");
+
+document.getElementById("title").textContent =
+mode === "signup" ? "Create your account" :
+mode === "reset" ? "Reset password" : "Welcome back";
+
+document.getElementById("description").textContent =
+mode === "signup" ? "Join BizPilot AI today." :
+mode === "reset" ? "Request a password reset link." :
+"Sign in to your business assistant.";
+
+document.getElementById("submit").textContent =
+mode === "signup" ? "Create account" :
+mode === "reset" ? "Send reset link" : "Sign in";
+
+document.getElementById("switch").classList.toggle("hidden", mode === "reset");
+document.getElementById("forgot").classList.toggle("hidden", mode !== "login");
+document.getElementById("switch").textContent =
+mode === "signup" ? "I already have an account" : "Create an account";
+}
+
+document.getElementById("switch").onclick = () => {
+setMode(mode === "signup" ? "login" : "signup");
+};
+
+document.getElementById("forgot").onclick = () => setMode("reset");
+
+document.getElementById("submit").onclick = async () => {
+const email = document.getElementById("email").value.trim();
+const password = document.getElementById("password").value;
+const name = document.getElementById("name").value.trim();
+
+if(!email){
+showMessage("Please enter your email.");
+return;
+}
+
+const button = document.getElementById("submit");
+button.disabled = true;
+
+try{
+let result;
+
+if(mode === "signup"){
+if(password.length < 6) throw new Error("Password must have at least 6 characters.");
+
+result = await db.auth.signUp({
+email,
+password,
+options:{
+data:{full_name:name},
+emailRedirectTo:location.origin
+}
+});
+
+if(result.error) throw result.error;
+
+showMessage("Account created! Check your email to confirm registration.");
+
+}else if(mode === "login"){
+
+result = await db.auth.signInWithPassword({email,password});
+
+if(result.error) throw result.error;
+
+await updateDashboard();
+
+}else{
+
+result = await db.auth.resetPasswordForEmail(email,{
+redirectTo:location.origin
+});
+
+if(result.error) throw result.error;
+
+showMessage("Password reset email sent. Check your inbox.");
+}
+
+}catch(error){
+showMessage(error.message);
+}finally{
+button.disabled = false;
+}
+};
+
+async function updateDashboard(){
+const {data,error} = await db.auth.getUser();
+
+if(error || !data.user) return;
+
+auth.classList.add("hidden");
+dashboard.classList.remove("hidden");
+
+document.getElementById("welcome").textContent =
+"Welcome, " + (data.user.user_metadata.full_name || "Business owner");
+
+document.getElementById("profileEmail").textContent = data.user.email;
+}
+
+document.getElementById("logout").onclick = async () => {
+await db.auth.signOut();
+dashboard.classList.add("hidden");
+auth.classList.remove("hidden");
+setMode("login");
+};
+
+db.auth.onAuthStateChange((event,session)=>{
+if(session) updateDashboard();
+});
+
+updateDashboard();
+</script>
+
+</body>
+  </html>
