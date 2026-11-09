@@ -220,6 +220,85 @@ if(session) updateDashboard();
 });
 
 updateDashboard();
+// BIZPILOT AI WORKSPACE
+
+const aiPanel = document.createElement("div");
+
+aiPanel.className = "tile";
+aiPanel.style.marginTop = "25px";
+
+aiPanel.innerHTML = `
+  <h2>BizPilot AI Assistant</h2>
+  <p>Choose your AI business tool.</p>
+
+  <select id="aiTool" style="width:100%;padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:8px">
+    <option value="support">Customer Support</option>
+    <option value="email">Email Writer</option>
+    <option value="marketing">Marketing Assistant</option>
+  </select>
+
+  <textarea id="aiMessage"
+    placeholder="Describe what you need..."
+    style="width:100%;height:120px;padding:12px;border:1px solid #ddd;border-radius:8px;resize:vertical">
+  </textarea>
+
+  <button id="aiGenerate" class="full">Generate with AI</button>
+
+  <div id="aiResult"
+    style="margin-top:20px;white-space:pre-wrap;overflow-wrap:anywhere">
+  </div>
+`;
+
+dashboard.appendChild(aiPanel);
+
+document.getElementById("aiGenerate").onclick = async () => {
+
+  const message = document.getElementById("aiMessage").value.trim();
+  const tool = document.getElementById("aiTool").value;
+  const resultBox = document.getElementById("aiResult");
+  const button = document.getElementById("aiGenerate");
+
+  if (!message) {
+    resultBox.textContent = "Please enter your request.";
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Generating...";
+  resultBox.textContent = "AI is working...";
+
+  try {
+
+    const { data, error } = await db.functions.invoke(
+      "bizpilot-ai",
+      {
+        body: {
+          message: message,
+          tool: tool
+        }
+      }
+    );
+
+    if (error) throw error;
+
+    if (!data || !data.result) {
+      throw new Error("No response received.");
+    }
+
+    resultBox.textContent = data.result;
+
+  } catch (error) {
+
+    resultBox.textContent =
+      "Error: " + error.message;
+
+  } finally {
+
+    button.disabled = false;
+    button.textContent = "Generate with AI";
+
+  }
+};
 </script>
 
 </body>
